@@ -3,18 +3,26 @@ from torch import Tensor
 import matplotlib.pyplot as plt
 
 
-class Layer:
-    def forward(self, x: Tensor) -> Tensor:
-        """compute the forward pass"""
-        raise NotImplementedError
-
-    def backward(self, dl: Tensor) -> Tensor:
-        """compute the backward pass"""
-        raise NotImplementedError
-
+class Module:
     def params(self) -> list[tuple[Tensor, Tensor]]:
         """return an iterator of parameters to be updated"""
         return []
+
+
+class Layer(Module):
+    def forward(self, x: Tensor) -> Tensor:
+        raise NotImplementedError
+
+    def backward(self, grad: Tensor) -> Tensor:
+        raise NotImplementedError
+
+
+class Loss(Module):
+    def forward(self, x: Tensor, y: Tensor) -> Tensor:
+        raise NotImplementedError
+
+    def backward(self) -> Tensor:
+        raise NotImplementedError
 
 
 class Linear(Layer):
@@ -125,7 +133,7 @@ class Relu(Layer):
         return dl
 
 
-class CrossEntropyLoss(Layer):
+class CrossEntropyLoss(Loss):
     t: Tensor | None
     x: Tensor | None
     y: Tensor | None
@@ -168,7 +176,7 @@ class SGD(Optimizer):
 
 
 class MLP:
-    def __init__(self, layers: list[Layer], loss: Layer) -> None:
+    def __init__(self, layers: list[Layer], loss: Loss) -> None:
         self.layers = layers
         self.loss = loss
 
