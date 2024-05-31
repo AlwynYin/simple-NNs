@@ -1,5 +1,6 @@
 import torch
 from torch import Tensor
+import matplotlib.pyplot as plt
 
 
 class Layer:
@@ -164,3 +165,59 @@ class SGD(Optimizer):
                 # print(param.shape)
                 # print(grad.shape)
                 param -= self.lr * grad
+
+
+class MLP:
+    def __init__(self, layers: list[Layer], loss: Layer) -> None:
+        self.layers = layers
+        self.loss = loss
+
+    def forward(self, x: Tensor) -> Tensor:
+        x = x.clone()
+        pass
+        for layer in self.layers:
+            x = layer.forward(x)
+            pass
+        return x
+
+    def backward(self) -> None:
+        y = self.loss.backward()
+        for layer in self.layers[::-1]:
+            y = layer.backward(y)
+
+    def params(self) -> list[tuple[Tensor, Tensor]]:
+        params = []
+        for layer in self.layers:
+            params += layer.params()
+        return params
+
+    def train(self, x_train: Tensor, t_train: Tensor, x_val: Tensor, t_val: Tensor,
+              batch_size: int, num_epochs: int,
+              lr: float = 0.05) -> None:
+        if len(t_val.shape) > 1:
+            t_val = torch.argmax(t_val, dim=1)
+
+        optimizer = SGD(self.layers, lr)
+        train_losses = []
+        valid_acc = []
+
+        for i in range(num_epochs):
+            print(f"epoch {i}")
+            indices = torch.randperm(len(x_train))
+            for j in range(0, len(indices), batch_size):
+                batch_ind = indices[j: j + batch_size]
+                x_batch = x_train[batch_ind]
+                t_batch = t_train[batch_ind]
+                y_batch = self.forward(x_batch)
+                loss = self.loss.forward(y_batch, t_batch)
+                train_losses.append(loss.item())
+                self.backward()
+                optimizer.step()
+            y_val = torch.argmax(self.forward(x_val), dim=1)
+            valid_acc.append((y_val == t_val).sum().item() / len(t_val))
+        plt.plot(train_losses)
+        plt.title(f"train loss, batch_size={batch_size}, num_epoch={num_epochs}, lr={lr}")
+        plt.show()
+        plt.plot(valid_acc)
+        plt.title(f'validation accuracy, batch_size={batch_size}, num_epoch={num_epochs}, lr={lr}')
+        plt.show()
