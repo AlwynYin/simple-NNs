@@ -6,6 +6,21 @@ import torch
 from torch import Tensor
 
 
+def sigmoid(x: Tensor) -> Tensor:
+    return 1 / (1 + torch.exp(-x))
+
+
+def softmax(x: Tensor) -> Tensor:
+    exp = torch.exp(x)
+    exp_sum = torch.sum(exp, dim=1, keepdim=True)
+    return exp / exp_sum
+
+
+def relu(x: Tensor) -> Tensor:
+    x[x < 0] = 0
+    return x
+
+
 class Module:
     def __init__(self, device):
         self.device = device
@@ -103,9 +118,30 @@ class MaxPool2d(Module):
         return max_windows.amax(dim=(4, 5), keepdim=False)
 
 
+class Flatten(Module):
+    def forward(self, x: Tensor) -> Tensor:
+        return x.view(x.shape[0], -1)
+
+
+class RnnCell(Module):
+    def __init__(self, input_size, hidden_size, output_size, device=torch.device('cpu')):
+        super().__init__(device)
+        self.hidden_layer = Linear(input_size + hidden_size, hidden_size)
+        self.output_layer = Linear(input_size + hidden_size, output_size)
+        self.hidden = torch.zeros(hidden_size, device=device)
+        self.to(device)
+
+    def forward(self, x: Tensor) -> Tensor:
+        concat = torch.cat((x, self.hidden), dim=1)
+        self.hidden = sigmoid(self.hidden_layer.forward(concat))
+        output = self.output_layer.forward(concat)
+        return output
+
+
 class ReLU(Module):
     def forward(self, x:Tensor) -> Tensor:
-        return torch.maximum(x, 0)
+        x[x < 0] = 0
+        return x
 
 
 class Sigmoid(Module):
